@@ -311,6 +311,71 @@ def _send_report():
 
     print(f'[{now}] ✅ เสร็จแล้ว')
 
+# ── Telegram Commands ────────────────────────────────────
+last_update_id = 0
+
+def get_updates():
+    global last_update_id
+    try:
+        url = f'https://api.telegram.org/bot{BOT_TOKEN}/getUpdates'
+        r = requests.get(url, params={'offset': last_update_id + 1, 'timeout': 5}, timeout=10)
+        return r.json().get('result', [])
+    except:
+        return []
+
+def handle_commands():
+    global last_update_id
+    updates = get_updates()
+    for update in updates:
+        last_update_id = update['update_id']
+        msg = update.get('message', {})
+        text = msg.get('text', '').strip()
+        if not text.startswith('/'):
+            continue
+
+        parts  = text.split()
+        cmd    = parts[0].lower()
+        args   = parts[1:]
+
+        if cmd == '/price' and args:
+            ticker = args[0].upper()
+            if not ticker.endswith('.BK'):
+                ticker += '.BK'
+            s = get_stock_info(ticker)
+            if s:
+                send_message(format_stock_price(s))
+            else:
+                send_message(f'ไม่พบข้อมูล {ticker}')
+
+        elif cmd == '/watchlist':
+            send_message('กำลังดึงราคาทั้ง watchlist...')
+            lines = []
+            for ticker in WATCHLIST:
+                s = get_stock_info(ticker)
+                lines.append(format_stock_price(s) if s else f'⚠️ {ticker}: ดึงไม่ได้')
+                time.sleep(0.3)
+            now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+            send_message(f'📊 <b>Watchlist</b>\n📅 {now}\n\n' + '\n\n'.join(lines))
+
+        elif cmd == '/status':
+            now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+            market = 'เปิด' if is_market_open() else 'ปิด'
+            send_message(
+                f'✅ <b>Investment OS Bot</b>\n'
+                f'📅 {now}\n'
+                f'📈 ตลาด: {market}\n'
+                f'👀 Watchlist: {len(WATCHLIST)} หุ้น'
+            )
+
+        elif cmd == '/help':
+            send_message(
+                '<b>คำสั่งที่ใช้ได้:</b>\n\n'
+                '/price BCH — ดูราคาหุ้น\n'
+                '/watchlist — ดูราคาทุกตัวใน watchlist\n'
+                '/status — สถานะ bot\n'
+                '/help — คำสั่งทั้งหมด'
+            )
+
 # ── Schedule UTC ─────────────────────────────────────────
 schedule.every().day.at('03:30').do(send_report)  # 10:30 TH
 schedule.every().day.at('05:30').do(send_report)  # 12:30 TH
@@ -321,7 +386,9 @@ print('🚀 Investment OS Bot เริ่มทำงานแล้ว')
 print('📅 ตลาดเปิด  → ราคา + ข่าว + แจ้งเตือนสำคัญ')
 print('📅 ตลาดปิด  → ข่าว + แจ้งเตือนสำคัญ')
 print('🚨 ปันผล/Earnings → แจ้งเตือนทันที')
+print('💬 Commands: /price /watchlist /status /help')
 
 while True:
     schedule.run_pending()
-    time.sleep(30)
+    handle_commands()
+    time.sleep(5)
