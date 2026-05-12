@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 import yfinance as yf
 import feedparser
@@ -34,8 +35,24 @@ IMPORTANT_KEYWORDS = [
 
 TH_TZ = timezone(timedelta(hours=7))
 
-# เก็บ dividend ที่เคยเห็นแล้ว (ป้องกันแจ้งซ้ำ)
-seen_dividends = {}
+SEEN_DIVIDENDS_FILE = '/data/seen_dividends.json'
+
+def load_seen_dividends():
+    try:
+        with open(SEEN_DIVIDENDS_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_seen_dividends(data):
+    try:
+        os.makedirs('/data', exist_ok=True)
+        with open(SEEN_DIVIDENDS_FILE, 'w') as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f'save_seen_dividends error: {e}')
+
+seen_dividends = load_seen_dividends()
 
 
 def is_market_open():
@@ -177,7 +194,7 @@ def check_new_dividends():
             key = f'{ticker}_{latest_date}'
             if key not in seen_dividends:
                 seen_dividends[key] = True
-                # แจ้งเฉพาะปันผลที่ประกาศใน 30 วันล่าสุด
+                save_seen_dividends(seen_dividends)
                 div_date = divs.index[-1].date()
                 today    = datetime.now(TH_TZ).date()
                 if (today - div_date).days <= 30:
