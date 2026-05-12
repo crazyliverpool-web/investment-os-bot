@@ -6,8 +6,11 @@ import schedule
 import time
 from datetime import datetime, timezone, timedelta
 
-BOT_TOKEN = os.environ['BOT_TOKEN']
-CHAT_ID   = os.environ['CHAT_ID']
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+CHAT_ID   = os.environ.get('CHAT_ID')
+
+if not BOT_TOKEN or not CHAT_ID:
+    raise RuntimeError('BOT_TOKEN และ CHAT_ID ต้องตั้งใน Environment Variables')
 
 WATCHLIST = [
     'AIMCG.BK','ASK.BK','BAFS.BK','BCH.BK','BDMS.BK',
@@ -44,8 +47,28 @@ def is_market_open():
 
 def send_message(text):
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-    r = requests.post(url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': 'HTML'})
-    return r.json()
+    for attempt in range(3):
+        try:
+            r = requests.post(url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': 'HTML'}, timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            print(f'send_message attempt {attempt+1} failed: {e}')
+            if attempt < 2:
+                time.sleep(5)
+    print('send_message failed after 3 attempts')
+
+def send_error(context, error):
+    now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+    try:
+        url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+        requests.post(url, json={
+            'chat_id': CHAT_ID,
+            'text': f'🚨 <b>Investment OS — Bot Error</b>\n📅 {now}\n\n<b>จุด:</b> {context}\n<b>Error:</b> {str(error)[:300]}',
+            'parse_mode': 'HTML'
+        }, timeout=10)
+    except:
+        print(f'ERROR ALERT FAILED: {context} — {error}')
 
 def is_important_news(title):
     title_lower = title.lower()
@@ -197,6 +220,13 @@ def check_and_send_alerts():
 
 # ── รายงานหลัก ───────────────────────────────────────────
 def send_report():
+    try:
+        _send_report()
+    except Exception as e:
+        send_error('send_report', e)
+        print(f'send_report crashed: {e}')
+
+def _send_report():
     now         = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
     market_open = is_market_open()
     print(f'[{now}] ตลาด{"เปิด" if market_open else "ปิด"} — กำลังส่ง...')
