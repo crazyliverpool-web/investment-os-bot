@@ -1,3 +1,4 @@
+import os
 import requests
 import yfinance as yf
 import feedparser
@@ -5,8 +6,8 @@ import schedule
 import time
 from datetime import datetime, timezone, timedelta
 
-BOT_TOKEN = '8606404952:AAFicFNM78CH3pz2BVmddwbyJ5ObIf_H2DY'
-CHAT_ID   = '8078322111'
+BOT_TOKEN = os.environ['BOT_TOKEN']
+CHAT_ID   = os.environ['CHAT_ID']
 
 WATCHLIST = [
     'AIMCG.BK','ASK.BK','BAFS.BK','BCH.BK','BDMS.BK',
