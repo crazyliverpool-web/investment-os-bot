@@ -337,15 +337,25 @@ def handle_commands():
         cmd    = parts[0].lower()
         args   = parts[1:]
 
-        if cmd == '/price' and args:
-            ticker = args[0].upper()
-            if not ticker.endswith('.BK'):
-                ticker += '.BK'
-            s = get_stock_info(ticker)
-            if s:
-                send_message(format_stock_price(s))
+        if cmd == '/price':
+            if args:
+                ticker = args[0].upper()
+                if not ticker.endswith('.BK'):
+                    ticker += '.BK'
+                s = get_stock_info(ticker)
+                if s:
+                    send_message(format_stock_price(s))
+                else:
+                    send_message(f'ไม่พบข้อมูล {ticker}')
             else:
-                send_message(f'ไม่พบข้อมูล {ticker}')
+                send_message('กำลังดึงราคาทุกตัวใน watchlist...')
+                lines = []
+                for ticker in WATCHLIST:
+                    s = get_stock_info(ticker)
+                    lines.append(format_stock_price(s) if s else f'⚠️ {ticker}: ดึงไม่ได้')
+                    time.sleep(0.3)
+                now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+                send_message(f'📈 <b>ราคาหุ้น Watchlist</b>\n📅 {now}\n\n' + '\n\n'.join(lines))
 
         elif cmd == '/watchlist':
             send_message('กำลังดึงราคาทั้ง watchlist...')
@@ -370,7 +380,8 @@ def handle_commands():
         elif cmd == '/help':
             send_message(
                 '<b>คำสั่งที่ใช้ได้:</b>\n\n'
-                '/price BCH — ดูราคาหุ้น\n'
+                '/price — ดูราคาทุกตัวใน watchlist\n'
+                '/price BCH — ดูราคาหุ้นรายตัว\n'
                 '/watchlist — ดูราคาทุกตัวใน watchlist\n'
                 '/status — สถานะ bot\n'
                 '/help — คำสั่งทั้งหมด'
