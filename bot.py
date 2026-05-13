@@ -338,7 +338,16 @@ def handle_commands():
         args   = parts[1:]
 
         if cmd == '/price':
-            if args:
+            if args and args[0].lower() == 'port':
+                send_message('กำลังดึงราคา portfolio ทุกตัว...')
+                lines = []
+                for ticker in WATCHLIST:
+                    s = get_stock_info(ticker)
+                    lines.append(format_stock_price(s) if s else f'⚠️ {ticker}: ดึงไม่ได้')
+                    time.sleep(0.3)
+                now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+                send_message(f'💼 <b>Portfolio — ราคาหุ้นที่ถืออยู่</b>\n📅 {now}\n\n' + '\n\n'.join(lines))
+            elif args:
                 ticker = args[0].upper()
                 if not ticker.endswith('.BK'):
                     ticker += '.BK'
@@ -381,6 +390,7 @@ def handle_commands():
             send_message(
                 '<b>คำสั่งที่ใช้ได้:</b>\n\n'
                 '/price — ดูราคาทุกตัวใน watchlist\n'
+                '/price port — ดูราคา portfolio ทุกตัว\n'
                 '/price BCH — ดูราคาหุ้นรายตัว\n'
                 '/watchlist — ดูราคาทุกตัวใน watchlist\n'
                 '/status — สถานะ bot\n'
