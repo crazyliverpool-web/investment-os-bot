@@ -386,6 +386,26 @@ def handle_commands():
             now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
             send_message(f'📊 <b>Watchlist</b>\n📅 {now}\n\n' + '\n\n'.join(lines))
 
+        elif cmd == '/news':
+            send_message('กำลังดึงข่าวหุ้นใน watchlist...')
+            stock_news_lines = []
+            important_news_all = []
+            for ticker in WATCHLIST:
+                important, normal = get_stock_news(ticker)
+                important_news_all.extend([f'<b>{ticker}</b>: ' + n for n in important])
+                lines = important + normal
+                if lines:
+                    stock_news_lines.append(f'\n📌 <b>{ticker}</b>\n' + '\n'.join(lines))
+                time.sleep(0.3)
+            now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
+            if stock_news_lines:
+                send_message(f'📰 <b>ข่าวหุ้น Watchlist</b>\n📅 {now}\n{"─"*28}' + ''.join(stock_news_lines))
+            else:
+                send_message(f'📰 ไม่พบข่าวใหม่ในขณะนี้\n📅 {now}')
+            if important_news_all:
+                time.sleep(1)
+                send_message('🚨 <b>ข่าวสำคัญ — ต้องติดตาม!</b>\n' + '─'*28 + '\n' + '\n\n'.join(important_news_all))
+
         elif cmd == '/status':
             now = datetime.now(TH_TZ).strftime('%d/%m/%Y %H:%M')
             market = 'เปิด' if is_market_open() else 'ปิด'
@@ -402,6 +422,7 @@ def handle_commands():
                 '/price — ดูราคาทุกตัวใน watchlist\n'
                 '/price port — ดูราคา portfolio ทุกตัว\n'
                 '/port — ดูราคา portfolio ทุกตัว (shortcut)\n'
+                '/news — ดูข่าวหุ้นทุกตัวใน watchlist\n'
                 '/price BCH — ดูราคาหุ้นรายตัว\n'
                 '/watchlist — ดูราคาทุกตัวใน watchlist\n'
                 '/status — สถานะ bot\n'
